@@ -1,0 +1,41 @@
+#############edited LogLikFun.R
+LL=function(param, mod, envir=NULL) {
+#if (mod@known.param=="Trend") {
+  #  beta <- mod@trend.coef
+  #} else {
+    beta <- NULL
+  #}
+#
+nparam <- length(param)
+    #if (class(mod@covar) != "covAdditive0") {
+		  mod@covar <- vec1(mod@covar, param[1:(nparam-1)])
+		  mod@covar@sd2 <- param[nparam]
+    #} else {
+      #mod@covar <- vec1(mod@covar, param)
+    #}
+#
+#aux <- covMatrix(mod@covar, mod@X, noise.var=mod@covar@noise.var)
+aux <- covMatrix(mod@covar, mod@X, noise.var=noise.var)##use this one
+	
+		C <- aux[[1]]
+		vn <- aux[[2]]
+
+    T <- chol(C)
+    x <- backsolve(t(T), mod@y, upper.tri = FALSE)
+    M <- backsolve(t(T), mod@F, upper.tri = FALSE)
+		z <- compute.z(x=x, M=M, beta=beta)
+		
+    logLik <-  -0.5*(mod@n * log(2*pi) + 2*sum(log(diag(T))) + t(z)%*%z)     
+	#logLik <-  -0.5*(mod@n * log(2*pi) + log(det(C)) + t(Y-FB)%*%(Y-FB))     
+	
+		if (!is.null(envir)) {
+      envir$T <- T
+      envir$C <- C
+      envir$vn <- vn
+      envir$z <- z
+		}
+
+return(logLik)
+}
+###########
+

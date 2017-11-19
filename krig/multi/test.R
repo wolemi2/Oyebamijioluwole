@@ -1,0 +1,248 @@
+#############
+M(toy_mhp)
+Mo=  temp rain humidity
+temp      1.0 -0.7      0.5
+rain     -0.7  2.0      1.4
+humidity  0.5  1.4      3.0
+
+Bo=B(toy_mhp)
+> Bo
+, , temp
+
+     a    b    c    d
+a 8.56 0.00 0.00 0.00
+b 0.00 5.89 0.00 0.00
+c 0.00 0.00 1.16 0.00
+d 0.00 0.00 0.00 6.63
+
+, , rain
+
+     a    b    c    d
+a 4.79 0.00 0.00 0.00
+b 0.00 4.74 0.00 0.00
+c 0.00 0.00 9.06 0.00
+d 0.00 0.00 0.00 9.83
+
+, , humidity
+
+     a    b    c    d
+a 4.79 0.00 0.00 0.00
+b 0.00 4.74 0.00 0.00
+c 0.00 0.00 9.56 0.00
+d 0.00 0.00 0.00 9.43
+test=var.matrix(toy_mm, hp=toy_mhp)###correct
+x1=toy_mm
+x2=x1
+output_type1=c("temp","rain","humidity")
+output_type2=c("temp","rain","humidity")##could be different
+type=types(x1)
+ninput=4
+##########################
+var.matrix2=function (x1, x2 = x1,Bo,Mo) 
+{
+type1=types(x1)
+type2=types(x2)
+    Sigma <- matrix(NA, nrow(x1), nrow(x2))
+    rownames(Sigma) <- rownames(x1)
+    colnames(Sigma) <- rownames(x2)
+    for (i in output_type) {
+        for (j in output_type) {
+            ni <- which(i == output_type1)
+            nj <- which(j == output_type2)
+            ii <- which(i == type1)
+            jj <- which(j == type2)
+            p=1:ninput
+x1=as.matrix(x1);x2=as.matrix(x2)
+            Sigma[ii, jj] <- ss(Bo[, , ni], Bo[, , nj]) * Mo[ni, 
+                nj] * corr.matrix(x2[jj,p],x1[ii,p], pos.def.matrix = solve(solve(Bo[, 
+                  , i])/2 + solve(Bo[, , j])/2))
+        }}
+    return(Sigma)
+}
+#################################
+test2=var.matrix2(x1,x2=x1,Bo,Mo)###mine
+
+#####
+var.matrix3=function (x1, x2 = x1,Bo,Mo) 
+{
+type1=types(x1)
+type2=types(x2)
+    Sigma <- matrix(NA, nrow(x1), nrow(x2))
+    rownames(Sigma) <- rownames(x1)
+    colnames(Sigma) <- rownames(x2)
+    for (i in output_type) {
+        for (j in output_type) {
+            ni <- which(i == output_type1)
+            nj <- which(j == output_type2)
+            ii <- which(i == type1)
+            jj <- which(j == type2)
+            p=1:ninput
+x1=as.matrix(x1);x2=as.matrix(x2)
+            Sigma[ii, jj] <- ss(Bo[, , ni], Bo[, , nj]) * Mo[ni, 
+                nj] * corr.matrix(x2[jj,p],x1[ii,p], pos.def.matrix = solve(solve(Bo[, 
+                  , i])/2 + solve(Bo[, , j])/2))
+        }}
+    return(Sigma)
+}
+#################################
+pdf=solve(solve(Bo[,, i])/2 + solve(Bo[, , j])/2)
+r1=corr.matrix(x2[jj,p],x1[ii,p], pos.def.matrix = solve(solve(Bo[,, i])/2 + solve(Bo[, , j])/2))
+r2=covMatrix()
+
+covMatrix<- function(model, X, noise.var=NULL) {
+  d <- ncol(X)
+  n <- nrow(X)
+param <- covparam2vect(model)
+out <- .C("C_covMatrix", 
+            as.double(X), as.integer(n), as.integer(d), 
+            as.double(param), as.double(model@sd2), as.character(model@name), 
+            ans = double(n * n))
+  C <- matrix(out$ans, n, n)   # covariance matrix when there is no nugget effect
+ if (model@nugget.flag) {
+vn <- rep(model@nugget, n)
+C <- C + diag(vn, nrow = n)
+  } else if (length(noise.var)>0) {
+vn <- noise.var
+C <- C + diag(noise.var, nrow = n)
+  } else {
+vn <- rep(0, n)
+  }
+return(list(C=C, vn=vn))
+}
+
+
+###############
+test2=var.matrix2(x1,x2=x1,Bo,Mo)###mine
+
+##########################optimal#
+function (expt, LoF, start_hp, option = "a", ...) 
+{
+    mm <- get_mdm(expt)
+    d <- get_obs(expt)
+    if (missing(start_hp)) {
+        out <- as.mhp(mm)
+    }
+    else {
+        out <- start_hp
+    }
+    if (missing(LoF)) {
+        LoF <- default_LoF(mm)
+    }
+    B(out) <- optimal_B(expt, LoF, start_hp = out, option = option, 
+        ...)
+    {
+        jj <- optimal_diag_M(expt, LoF, start_hp = out)
+        jjM <- diag(M(out))
+        covs <- M(out)/sqrt(kronecker(jjM, t(jjM)))
+        M(out) <- sqrt(kronecker(jj, t(jj))) * covs
+    }
+    M(out) <- optimal_M(expt, LoF, start_hp = out, ...)
+    return(out)
+}
+#########################optimal_B
+function (expt, LoF, start_hp, option = "a", verbose = FALSE, 
+    ...) 
+{
+    mm <- get_mdm(expt)
+    if (missing(start_hp)) {
+        start_hp <- as.mhp(mm)
+    }
+    stopifnot(compatible(mm, start_hp))
+    seps <- as.separate(expt)
+    B <- B(start_hp)
+    if (option == "a") {
+        for (i in seq_along(names(seps))) {
+            if (verbose) {
+                print(paste("calculating ", i, " / ", length(names(seps)), 
+                  sep = ""))
+            }
+            jj <- optimal.scale(seps[[i]]$val, seps[[i]]$obs, 
+                func = LoF[[i]], ...)
+            B[, , i] <- diag(jj, nrow = dim(B)[1])
+            if (verbose) {
+                print(paste("calculated ", i, " / ", length(names(seps)), 
+                  sep = ""))
+            }
+        }
+    }
+    else if (option == "b") {
+        for (i in seq_along(names(seps))) {
+            jj <- optimal.scales(val = seps[[i]]$val, scales.start = diag(B[, 
+                , i]), d = seps[[i]]$obs, func = LoF[[i]], ...)
+            B[, , i] <- diag(jj, nrow = dim(B)[1])
+        }
+    }
+    else if (option == "c") {
+        B <- optimal_identical_B(expt, LoF, start_hp, verbose = FALSE, 
+            ...)
+    }
+    else {
+        stop("option must be 'a' or 'b' or 'c'")
+    }
+    return(B)
+}
+
+###############optimal_diag_M
+function (expt, LoF, start_hp) 
+{
+    jj <- as.separate(expt)
+    B_cond <- B(start_hp)
+    shs <- rep(NA, length(levels(expt)))
+    for (i in seq_along(shs)) {
+        val <- jj[[i]]$val
+        d1 <- jj[[i]]$obs
+        shs[i] <- sigmahatsquared(H = t(apply(val, 1, LoF[[i]])), 
+            Ainv = solve(corr.matrix(xold = val, scales = diag(B_cond[, 
+                , i]))), d = d1)
+    }
+    return(shs)
+}
+######################optimal_M
+function (expt, LoF, start_hp, ...) 
+{
+    mm <- get_mdm(expt)
+    d <- get_obs(expt)
+    make_M <- function(vec) {
+        jj_M <- M(start_hp)
+        jj_M[upper.tri(jj_M, diag = TRUE)] <- vec
+        jj_M[lower.tri(jj_M, diag = FALSE)] <- 0
+        jj_M <- jj_M + t(jj_M)
+        diag(jj_M) <- diag(jj_M)/2
+        return(jj_M)
+    }
+    jj_hp <- start_hp
+    f <- function(vec) {
+        jj <- make_M(vec)
+        if (any(Re(eigen(jj, TRUE, TRUE)$values) < 0)) {
+            return(Inf)
+        }
+        else {
+            M(jj_hp) <- make_M(vec)
+            out <- eq2.36(H = regressor(mm, LoF), Sigmainv = solve(var.matrix(x1 = mm, 
+                hp = jj_hp, ...)), d = d, log = TRUE)
+            return(-out)
+        }
+    }
+    jj <- M(start_hp)
+    start_vec <- jj[upper.tri(jj, diag = TRUE)]
+    opt_vec <- optim(par = start_vec, fn = f, ...)
+    return(make_M(opt_vec$par))
+}
+########## eq2.36
+function (H, Sigmainv, d, log = TRUE) 
+{
+    f <- function(m) {
+        c(determinant(m, logarithm = TRUE)$modulus)
+    }
+    betahat <- betahat_mult(H, Sigmainv, d)
+    out <- f(Sigmainv) - f(quad.form(Sigmainv, H)) - quad.form(Sigmainv, 
+        d - H %*% betahat)
+    out <- out/2
+    if (log) {
+        return(out)
+    }
+    else {
+        return(exp(out))
+    }
+}
+############################

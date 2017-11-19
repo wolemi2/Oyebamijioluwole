@@ -1,0 +1,97 @@
+#############edited LogLikFun.R
+
+for(i in 1:lb){
+mod=mode[[i]]
+LLK=function(param, mod, envir=NULL) {
+beta <- NULL
+nparam <- length(param)
+mod@covar <- vec1(mod@covar, param[1:(nparam-1)])
+mod@covar@sd2 <- param[nparam]
+
+
+CC=list();VN=list()
+MM=matrix(NA,nrow=48,ncol=48)
+for(i in 1:lb){
+for(j in 1:lb){
+
+CC[[j]] <- aux
+}
+VN[[i]]=CC
+}
+library(abind)
+gaga1=abind(VN[[1]])
+gaga2=abind(VN[[2]])
+gaga3=abind(VN[[3]])
+gaga=rbind(gaga1,gaga2,gaga3)
+##or
+g1=abind(VN[[]][[1]])
+################################
+#A[upper.tri(A,diag=TRUE)]=c("a","b","c","d","e","f")
+CC=list();VN=list()
+MM=matrix(NA,nrow=48,ncol=48)
+gaga=list()
+for(i in 1:(lb-1)){
+for(j in (i+1):lb){
+m1=model[[i]];m2=model[[j]]
+
+aux <- covMat1Mat2(model[[i]]@covar,m1@X,m2@X)
+MM[i,j,drop=FALSE] <- aux
+}}
+
+
+VN[[i]]=CC
+}
+
+MM[1:ncol(VN[[i]][[j]]),]
+
+
+############################
+T <- chol(C)
+x <- backsolve(t(T), mod@y, upper.tri = FALSE)
+M <- backsolve(t(T), mod@F, upper.tri = FALSE)
+		z <- compute.z(x=x, M=M, beta=beta)
+		
+    logLik <-  -0.5*(mod@n * log(2*pi) + 2*sum(log(diag(T))) + t(z)%*%z)     
+	#logLik <-  -0.5*(mod@n * log(2*pi) + log(det(C)) + t(Y-FB)%*%(Y-FB))     
+	
+		if (!is.null(envir)) {
+      envir$T <- T
+      envir$C <- C
+      envir$vn <- vn
+      envir$z <- z
+		}
+
+return(logLik)
+}
+###########
+
+t1 <- types(x1)
+  t2 <- types(x2)
+
+  Sigma <- matrix(NA,nrow(xold(x1)),nrow(xold(x2)))
+  rownames(Sigma) <- rownames(x1)
+  colnames(Sigma) <- rownames(x2)
+
+  B <- B(hp)
+
+  for(i in levels(t1)){
+    for(j in levels(t2)){
+        ni <- which(i == levels(t1))
+        nj <- which(j == levels(t2))
+        ii <- which(i==t1)
+        jj <- which(j==t2)
+
+
+        if(FALSE){
+          print(i)
+          print(j)
+          print("-------")
+        }
+        Sigma[ii,jj] <-
+          ss(B[,,ni],B[,,nj]) * M(hp)[ni,nj]  *   
+            corr.matrix(xold(x2)[jj,,drop=FALSE],xold(x1)[ii,,drop=FALSE],
+                  pos.def.matrix = solve(solve(B[,,i])/2+solve(B[,,j])/2), ...)
+      }
+  }
+  return(Sigma)
+}

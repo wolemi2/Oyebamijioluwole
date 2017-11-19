@@ -1,0 +1,192 @@
+###################
+library(multivator)
+library(emulator)
+data(mtoys)
+dat=as.data.frame(toy_expt)
+t1=subset(dat,type=="temp")[,-5]  
+t2=subset(dat,type=="rain")[,-5]   
+t3=subset(dat,type=="humidity")[,-5]  
+B1=B(toy_mhp);Mo=M(toy_mhp) 
+Bo=list(B1[,,1],B1[,,2],B1[,,3])
+mm=list(t1[,-5],t2[,-5],t3[,-5])###list of input matrix
+dd=list(t1[,5],t2[,5],t3[,5])
+form=toy_LoF
+source("impt2.R",echo=FALSE)
+model=list()
+lb=length(Bo)
+#i=1
+for(i in 1:length(Bo)){
+response=dd[[i]]
+design=as.matrix(mm[[i]])
+formula=form[[i]]
+f=list(~(a+b+c+d),~(a+b+c+d),~(a+b+c+d))####form[[1]]
+covtype="matern5_2"
+nam=c("a","b","c","d")
+alpha=1/sqrt(2*diag(Bo[[i]]))
+s0=diag(Mo)[i]
+#model[[i]]=krige(formula=f[[i]],design,response,coef.var=s0,coef.cov=alpha,noise.var=rep(0,length(response)),covtype="gauss")
+model[[i]]=krige(formula=f[[i]],design,response,noise.var=rep(0,length(response)))
+}
+
+############################################MUltivariate part
+###form new mega model
+gap=list()
+for(i in 1:(lb-1)){
+for(j in (i+1):lb){
+m1=model[[i]];m2=model[[j]]
+n <- nrow(m1@X)+nrow(m2@X)
+parinit <- (m1@parinit+m2@parinit)/2
+lower <- (m1@lower+m2@lower)/2
+upper <- (m1@upper+m2@upper)/2
+ninit <- (m1@control$pop.size+m2@control$pop.size)/2
+param.n <- (m1@covar@param.n +m2@covar@param.n)/2
+nugget.aux <- c(m1@noise.var,m2@noise.var)
+y=rbind(m1@y,m2@y)
+F=rbind(m1@F,m2@F)
+XX=rbind(m1@X,m2@X)
+mod=model[[1]]
+mod@covar@name="matern5_2"
+#mod@covar@name="gauss"
+mod@n=n
+mod@covar@range.val=(m1@covar@range.val+m2@covar@range.val)/2##doesnt matter just using as an intial point
+mod@X=XX
+mod@F=F
+mod@y=y
+mod@noise.var=nugget.aux
+mod@lower=lower;mod@upper=upper;mod@parinit=parinit
+#}}
+source("multi/init2.R")
+wal=krig.init2(mod)
+gap[[i+j-2]]=wal
+}}
+###############
+nr1=sum(nrow(model[[1]]@X),nrow(model[[2]]@X),nrow(model[[3]]@X))
+nr2=sum(ncol(model[[1]]@F),ncol(model[[2]]@F),ncol(model[[3]]@F))
+
+ga1=cbind(t(model[[1]]@T)%*%model[[1]]@T,gap[[1]]$CC,gap[[2]]$CC)
+ga2=cbind(t(gap[[1]]$CC),t(model[[2]]@T)%*%model[[2]]@T,gap[[3]]$CC)
+ga3=cbind(t(gap[[2]]$CC),t(gap[[3]]$CC),t(model[[3]]@T)%*%model[[3]]@T)
+Sigma=rbind(ga1,ga2,ga3)
+
+F=matrix(0,nrow=nr1,ncol=nr2);X=F
+m1=model[[1]]@F;m2=model[[2]]@F;m3=model[[3]]@F;n1=model[[1]]@X;n2=model[[2]]@X;n3=model[[3]]@X
+F[1:nrow(m1),1:ncol(m1)]=m1
+F[(1+nrow(m1)):(nrow(m1)+nrow(m2)),(1+ncol(m1)):(ncol(m1)+ncol(m2))]=m2
+F[(1+nrow(m1)+nrow(m2)):(nrow(m1)+nrow(m2)+nrow(m3)),(1+ncol(m1)+ncol(m2)):(ncol(m1)+ncol(m2)+ncol(m3))]=m3
+X[1:nrow(n1),1:ncol(n1)]=n1
+X[(1+nrow(n1)):(nrow(n1)+nrow(n2)),(1+ncol(n1)):(ncol(n1)+ncol(n2))]=n2
+X[(1+nrow(n1)+nrow(n2)):(nrow(n1)+nrow(n2)+nrow(n3)),(1+ncol(n1)+ncol(n2)):(ncol(n1)+ncol(n2)+ncol(n3))]=n3
+
+Y=matrix(NA,nrow=nr1,ncol=1);zz=list()
+for(i in 1:lb){
+zz[[i]]=unlist(model[[i]]@y)
+Y=unlist(zz)
+}
+modd=model[[1]];v1=list()
+for(i in 1:lb){
+v1[[i]]=model[[i]]@vn
+vn=unlist(v1)
+}
+modd@vn=vn;modd@X=X
+modd@F=F;modd@C=Sigma;modd@y=as.matrix(Y)
+##############################loglik
+LLK=function(param,modd,envir=NULL){
+betahat=function(F,Sigmainv,Y)
+{out <- as.vector(solve(t(F) %*%Sigmainv%*%F, crossprod(crossprod(Sigmainv,F), Y)))
+names(out) <- colnames(F)
+return(out)
+}
+Y=modd@y
+Sigma=modd@C
+siginv=ginv(Sigma)
+beta=betahat(F,siginv,Y)
+library(Matrix)
+Sigmat=as.matrix(nearPD(Sigma)$mat)
+logLik <--0.5*(nr1 * log(2*pi) +determinant(Sigmat)$modulus + t(Y-F%*%beta)%*%siginv%*%(Y-F%*%beta))     
+if (!is.null(envir)) {
+#envir$T <- chol(Sigma)
+envir$C <- Sigmat
+#envir$y <- Y
+envir$vn =modd@vn
+}
+return(as.numeric(logLik))
+}
+envir.LLK <- new.env()
+#optim(par =gap[[1]]$par, fn =LLK,envir=envir.LLK)
+###########################################
+low=rep(NA,lb);upp=rep(NA,lb);sig=rep(NA,lb);sigg=rep(NA,lb)
+low1=rep(NA,lb);upp1=rep(NA,lb)
+rag=matrix(NA,nrow=length(nam),ncol=lb)
+for(i in 1:lb){
+lp=length(model[[i]]@lower)
+low1[i]=c(model[[i]]@lower)[lp]
+upp1[i]=c(model[[i]]@upper)[lp]
+low[i]=c(gap[[i]]$lower)
+upp[i]=c(gap[[i]]$upper)
+lower=c(low1,low)
+upper=c(upp1,upp)
+}
+
+
+for(i in 1:lb){
+rag[,i]=model[[i]]@covar@range.val
+rag2=c(rag)
+}
+for(i in 1:lb){
+sig[i]=model[[i]]@covar@sd2
+sigg[i]=gap[[i]]$cov
+sd=c(sig,sigg)
+}
+M=matrix(NA,nrow=lb,ncol=lb)
+#diag(M)=sig;M[lower.tri(M)]=M[upper.tri(M)]=sigg
+
+modd@covar@sd2=sd;modd@covar@range.val=rag2
+############################################
+fn=LLK
+fnscale <- -1
+gr <- grad2###gradient function also defined elsewhere
+modd@control$multistart <- multistart <- 1
+lower <- modd@lower <- as.numeric(lower)
+upper <- modd@upper <- as.numeric(upper)
+parinit <- sd#initList$par
+lp <- length(parinit)
+control <- modd@control
+cat("  - parameters lower bounds : ", lower[1:(lp)], "\n")
+ 		  cat("  - parameters upper bounds : ", upper[1:(lp)], "\n")
+ 		  cat("  - variance bounds : ", c(lower[lp], upper[lp]), "\n")
+		  #cat("  - best initial criterion value(s) : ", initList$value, "\n")
+#optimization############
+BFGSargs <- c("trace", "parscale", "ndeps", "maxit", "abstol", "reltol", "REPORT", "lnm", "factr", "pgtol")
+commonNames <- intersect(BFGSargs, names(control))
+controlChecked <- control[commonNames]
+controlChecked$REPORT <- 1
+forced <- list(fnscale = fnscale)
+controlChecked[names(forced)] <- forced
+multistart <- control$multistart
+######
+modd@parinit <- parinit
+#mod@covar <- initList$cov[[1]]
+o <- optim(par = parinit,fn=fn,gr = gr,modd, envir=envir.LLK,method = "L-BFGS-B",lower =lower, upper = upper,control = controlChecked, hessian = FALSE)
+
+o <- optim(par = parinit,fn=fn,gr =NULL,method = "L-BFGS-B",lower =lower, upper = upper,control = controlChecked, hessian = FALSE,modd, envir=envir.LLK)
+
+optim(par=parinit,fn=fn,modd=modd)
+
+##########################################################MuFiCoKriging
+g1=mymodel$cok[[1]]
+g2=mymodel$cok[[2]]
+g3=mymodel$cok[[3]]
+class(g2)="km"
+gg=simulate(g2)
+
+source("R/MuFicokm.R")
+source("R/NestedDesign.R")
+source("R/SubstDesign.R")
+new=SubstDesign(PX2 =mm[[2]],PX1 = mm[[1]])
+nest=NestedDesign(dat[,1:4],nlevel=3,n=c(10,19,19))
+
+
+mymodel=MuFicokm(formula=f,MuFidesign=mm,response=dd,nlevel=3)
+
+
+

@@ -1,0 +1,66 @@
+#########optimalvalue
+##mm=inputmatrix, d= vector of response,form=list of formula,start=list of initial parametersfor Bo and Mo
+function (mm,d,form, start, option = "a", ...) 
+{
+out <- start
+    B(out) <- optimal_B(mm,d,form, start = out, option = option,..)
+    {
+jj <- optimal_diag_M(expt, LoF, start_hp = out)
+        jjM <- diag(M(out))
+        covs <- M(out)/sqrt(kronecker(jjM, t(jjM)))
+        M(out) <- sqrt(kronecker(jj, t(jj))) * covs
+    }
+    M(out) <- optimal_M(expt, LoF, start_hp = out, ...)
+    return(out)
+}
+#################################
+#########################optimal_B
+optB=function (mm,d,form,Bo,verbose = FALSE,...) 
+{  
+#option == "a"
+        for (i in 1:length(mm)) {
+B <- Bo[[i]]
+#jj <- optimal.scale(as.matrix(mm[[i]]),d[[i]],func =form[[i]], ...)##isotrophy
+jj <- optimal.scales(val=as.matrix(mm[[i]]),scales.start= diag(Bo[[i]]),d=d[[i]], func =form[[i]])
+Bo[[i]] <- diag(jj, nrow = dim(B)[1])
+}
+return(Bo)
+}
+opt(mm,d,form,Bo)
+#################################optimal_M1==diagonal of M
+function(mm,d,form,Mo,Bo) 
+{
+    #jj <- as.separate(expt)
+    #B_cond <- B(start_hp)
+    shs <- rep(NA, length(levels(expt)))
+    for (i in i in 1:length(mm)) {
+ val <- mm[[i]]
+ d1 <- d[[i]]
+ shs[i] <- sigmahatsquared(H = t(apply(val, 1,form[[i]])), 
+ Ainv = solve(corr.matrix(xold = val, scales = diag(Bo[[i]]))), d = d1)
+}
+return(shs)
+}
+#############################
+    
+    
+    T <- envir$T
+z <- envir$z
+x <- backsolve(t(T), y, upper.tri = FALSE)
+M <- backsolve(t(T), F, upper.tri = FALSE)
+mod@T <- T
+mod@z <- as.numeric(z)
+mod@M <- M
+param <- as.numeric(o$par)
+lp <- length(param)
+mod@covar@sd2 <- param[lp]
+            mod@covar <- vec1(mod@covar,
+                param[1:(lp - 1)])
+            mod@lower <- mod@lower[1:(lp - 1)]
+            mod@upper <- mod@upper[1:(lp - 1)]
+            mod@parinit <- mod@parinit[1:(lp - 1)]
+
+return(mod)
+}
+gap2=krige(formula=f1,design,response,noise.var=0)
+

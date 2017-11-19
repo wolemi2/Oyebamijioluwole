@@ -1,0 +1,118 @@
+#
+logLik <- -0.5 * (model@n * log(2 * pi * sigma2.hat) +
+            2 * sum(log(diag(T))) + model@n)
+
+#########################
+d <- 2; n <- 16
+     design.fact <- expand.grid(x1=seq(0,1,length=4), x2=seq(0,1,length=4))
+     y <- apply(design.fact, 1, branin) 
+     
+     # kriging model 1 : matern5_2 covariance structure, no trend, no nugget effect
+     m1 <- km(design=design.fact, response=y)
+     
+     # kriging model 2 : matern5_2 covariance structure, 
+     #                   linear trend + interactions, no nugget effect
+     m2 <- km(~.^2, design=design.fact, response=y)
+#######################
+x <- c(0, 0.4, 0.6, 0.8, 1);
+     y <- c(-0.3, 0, -0.8, 0.5, 0.9)
+     
+     theta <- 0.01; sigma <- 3; trend <- c(-1,2)
+     
+     model <- km(~x, design=data.frame(x=x), response=data.frame(y=y), 
+                 covtype="matern5_2", coef.trend=trend, coef.cov=theta, 
+                 coef.var=sigma^2)
+     ######################################################
+#########################continuation
+data <- data.frame(design)
+  mod@trend.formula <- formula <- drop.response(formula, data = data)
+  F <- model.matrix(formula, data=data)
+  
+  # X <- as.matrix(design)
+  X <- as.matrix(data)
+  y <- as.matrix(response)
+	mod@X <- X
+	mod@y <- y
+	mod@d <- ncol(X)
+	mod@n <- nrow(X)
+	mod@F <- F
+	mod@p <- ncol(F)
+	mod@noise.var <- as.numeric(noise.var)##cal from repetition and supply
+coef.var <- coef.cov <- NULL
+covtype="gauss" ###other covariance like matern and exponential are possible
+nam=("a","b","c","d")
+theta=1/sqrt(2*diag(Bo[[i]]))
+mod@cov <- covs(covtype,d=4,var.names=nam,known.covparam="None",coef.var=1,coef.cov=theta)
+
+
+#######optimization of parameter set
+mod@optim.method <- as.character(optim.method)
+bounds <- bbound(mod@cov, design)
+lower <- bounds$lower
+upper <- bounds$upper
+
+control$multistart <- multistart  #supply by user
+  mod@lower <- as.numeric(lower)
+  mod@upper <- as.numeric(upper)
+  mod@parinit <- as.numeric(parinit)
+
+optim.method == "BFGS"
+control$pop.size <- 20
+control$pop.size <- max(control$pop.size, multistart)
+control$trace <- 3 ##or 0
+ control$upper.alpha <- 1 - 1e-08
+ mod@control <- control
+ mod@gr <- as.logical(gr)
+ ############## 
+envir.logLik <- new.env()
+mod@case <- "LLconcentration_beta"   ####for noisy obser
+#f <- kmEstimate
+###############from kmEstimate
+nugget <- mod@noise.var
+fn <- logLikFun   ###defined elsewhere
+fnscale <- -1
+gr <- logLikGrad###gradient function also defined elsewhere
+mod@control$multistart <- multistart <- 1
+initList <- kmNuggets.init(mod)###defined elsewhere
+lower <- mod@lower <- as.numeric(initList$lower)
+upper <- mod@upper <- as.numeric(initList$upper)
+	parinit <- initList$par
+	lp <- nrow(parinit)
+control <- mod@control
+
+# optimization
+BFGSargs <- c("trace", "parscale", "ndeps", "maxit", "abstol", "reltol", "REPORT", "lnm", "factr", "pgtol")
+commonNames <- intersect(BFGSargs, names(control))
+controlChecked <- control[commonNames]
+controlChecked$REPORT <- 1
+forced <- list(fnscale = fnscale)
+controlChecked[names(forced)] <- forced
+multistart <- control$multistart
+mod@parinit <- parinit <- as.numeric(parinit[, 1])
+mod@cov <- initList$cov[[1]]
+o <- optim(par = parinit, fn = fn, gr = gr,method = "L-BFGS-B", lower =lower, upper = upper,control = controlChecked, hessian = FALSE, mod, envir=envir)
+      mod@control$convergence <- o$convergence
+###end of optimization
+
+##case of MLE and noisy and fit the model
+mod@logLik <- as.numeric(o$value)
+T <- envir$T
+z <- envir$z
+x <- backsolve(t(T), y, upper.tri = FALSE)
+M <- backsolve(t(T), F, upper.tri = FALSE)
+model@T <- T
+mod@z <- as.numeric(z)
+mod@M <- M
+param <- as.numeric(o$par)
+lp <- length(param)
+mod@cov@sd2 <- param[lp]
+            mod@cov <- vect2covparam(mod@cov,
+                param[1:(lp - 1)])
+            mod@lower <- mod@lower[1:(lp - 1)]
+            mod@upper <- mod@upper[1:(lp - 1)]
+            mod@parinit <- mod@parinit[1:(lp - 1)]
+}
+return(mod)
+}
+####################################################################
+################end
