@@ -1,0 +1,52 @@
+#####NOV 5## from terminal
+git clone https://github.com/wolemi2/Oyebamijioluwole.git
+
+cd ./Oyebamijioluwole/
+git push
+git add code
+git commit -a (You have to add title to the vim file)
+#git push
+######################end
+###20 NOV
+cd ./Oyebamijioluwole/
+git push
+git add code2
+git commit -a (You have to add title to the vim file)  
+
+####################
+##for NUFEB 20 NOV 2015
+cd /home/noo11/nufeb/LargeScaleModelling/Oluwole
+git pull
+git push #(username wolemi2@yahoo.com)
+git add code code2
+git commit -a ###(Recent codes and documents)
+git push
+#########################
+##DEC 4
+cd /home/noo11/nufeb/LargeScaleModelling/Oluwole
+cd /home/noo11/nufeb/LargeScaleModelling/Oluwole
+git pull
+git push #(username wolemi2@yahoo.com)
+git add code code2
+git commit -a ###(Upscaling and other documents)
+git push
+#####################18-01-2016/nufeb
+cd /home/noo11/nufeb/LargeScaleModelling/Oluwole
+git pull
+#git push #(username wolemi2@yahoo.com)
+git add LAMMPS_emulator_V1a
+git commit -a '###(Emulator version 1a
+git push 
+#########################################13-09-2016
+####NUFEB1.0 Emulator
+#
+ssh topsy
+#cd /frontiers-shared/home/noo11/nufeb/LargeScaleModelling/Oluwole
+cd /home/noo11/nufeb/LargeScaleModelling/Oluwole/LAMMPS_emulator_paper
+
+
+#######################19/11/2017
+cd ./Oyebamijioluwole/
+git push
+git add code2
+git commit -a (You have to add title to the vim file)  
