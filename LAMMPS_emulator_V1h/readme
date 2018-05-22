@@ -1,0 +1,56 @@
+############LAMMPS EMULATOR version 1h####################
+#08-05-2018
+
+(A) DESCRIPTION
+A coupled-emulator which produces rates of change of nutrient concentrations namely 
+(nh3,no2,no3,o2,co2) and rates of change of the following characterized outputs
+(Biomass concentration for each particle, the total number of particles for each species, Biofilm height) respectively.
+For instance, dH/dt=(H_2-H_1)/(T_2-T_1)
+
+###14 outputs
+(i) Rate of change of SUB/Carbon substrate concentration (kg/m3)
+(ii) Rate of change of O2 concentration (kg/m3)
+(iii) Rate of change of NO2 concentration (kg/m3)
+(iv) Rate of change of NO3 concentration (kg/m3)
+(v) Rate of change of NH4 concentration (kg/m3)
+(vi) Rate of change of biomass for HET (kg)
+(vii) Rate of change of biomass for AOB (kg)
+(viii) Rate of change of biomass for NOB (kg)
+(ix) Rate of change of biomass for EPS (kg)
+(x) Rate of change of biofilm total number of particle for HET (unitless)
+(xi) Rate of change of biofilm total number of particle for AOB (unitless)
+(xii) Rate of change of biofilm total number of particle for NOB (unitless)
+(xiii) Rate of change of biofilm total number of particle for EPS (unitless)
+(xiv) Rate of change of biofilm average height (m)
+
+(B) All required data and C++ scripts for the emulator are in the directory "LAMMPS_emulator_V1h". 
+The main c++ source code is "emu.cpp". 
+
+(C) Input file description:
+A sample "input.txt" file is placed in the "input" subfolder which is a required input parameters for running the emulator.
+This contain 14 different values
+The input values [1..5] represent "SUB","O2","NO2","NO3","NH4" local nutrient substrates (mol/L) respectively. 
+The input values [6..14] represent current values of "Biomass concentration for each species","total number of particle for each species","Biofilm height".
+
+(D) RUN the code:
+The main source code is "emu.cpp". The emulator can be run from either the Window or Linux platform. 
+Put the input file "input.txt" to be run in the subfolder "input". These files contain the parameter values and initial conditions.
+To run any case, the input parameters must be converted to the units stated above to get correct results.
+
+To run from Linux terminal:
+$ cd path to /LAMMPS_emulator_V1h
+/** compile .cpp file
+$ g++ -O3 -I/usr/include/eigen3/ emu.cpp -o emu
+/** run the code as
+$ ./emu
+
+(E) Obtain the simulation results from subfolder "output".
+
+(F) The valid ranges of the nutrient concentrations (kg/m3) and other parameters:
+       "SUB"         "O2"      "NO2",         "NO3"        "NH4"        "Biomass_HET"  "Biomass_AOB"  "Biomass_NOB"  "Biomass_EPS"   "HET"     "AOB"  "NOB"  "HET"      "Height"
+min=[0.003593248 0.001885759  2.622689e-119 5.293362e-118 4.234222e-116 1.046317e-14  4.196982e-15    2.840420e-15  2.840420e-15   40       40   40    1        4.405903e-09]
+max=[0.044765000 0.014969000  8.995006e-03  8.995000e-03  8.995000e-03  2.275782e-10  2.159382e-10    4.261543e-14  4.271532e-14   1566071  318  310   1909427  1.755295e-05]
+  
+NOTE: This emulator will produce output for any specified time-steps and for any parameter combinations 
+CONTACT: oluwole.oyebamiji@ncl.ac.uk or wolemi2@yahoo.com for further details.
+
